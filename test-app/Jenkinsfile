@@ -1,5 +1,10 @@
 pipeline {
     agent any
+
+    environment {
+    NODEJS_HOME = tool name: 'nodejs', type: 'NodeJSInstallation'
+    PATH = "${NODEJS_HOME}/bin:${env.PATH}"
+    }
     stages {
         stage('Get Commit Info...') {
             steps {
@@ -33,38 +38,49 @@ pipeline {
                 }
             }
         }
-        stage('Build') {
+        stage('Checkout') {
             steps {
-                echo "Running build..."
-                script {
-                    try {
-                        // echo 'Running actual commands here...'
-                        bat "python app.py"
-                        // bat "exit 0"  // Replace 'exit 0' with actual build commands
-                    // throw new Exception("Custom Error")
-                    } catch (Exception e) {
-                            echo "Error occurred while executing build commands"
-                            currentBuild.result = 'FAILURE'
-                            throw e
-                    }
-                }
+                // Checkout the code from your repository
+                git 'https://github.com/AnujaS187/React.git'
             }
         }
+        
+        stage('Install Dependencies') {
+            steps {
+                // Install npm dependencies
+                sh 'npm install'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                // Build the React application
+                sh 'npm run build'
+            }
+        }
+
+        stage('Test') {
+            steps {
+                // Run tests
+                sh 'npm test'
+            }
+        }
+    }
     }
     post {
         success {
             // API call for success with committer info
             echo "Build successful. Calling switch bulb API"
-            bat """
-                curl --location --request POST "http://localhost:8001/switch-bulb?author_name=${env.AUTHOR_NAME_ENCODED}&author_email=${env.AUTHOR_EMAIL_ENCODED}&build_status=true"
-            """
+            // bat """
+            //     curl --location --request POST "http://localhost:8001/switch-bulb?author_name=${env.AUTHOR_NAME_ENCODED}&author_email=${env.AUTHOR_EMAIL_ENCODED}&build_status=true"
+            // """
         }
         failure {
             // API call for failure with committer info
             echo "Build failed. Calling switch bulb API"
-            bat """
-                curl --location --request POST "http://localhost:8001/switch-bulb?author_name=${env.AUTHOR_NAME_ENCODED}&author_email=${env.AUTHOR_EMAIL_ENCODED}&build_status=false"
-            """
+            // bat """
+            //     curl --location --request POST "http://localhost:8001/switch-bulb?author_name=${env.AUTHOR_NAME_ENCODED}&author_email=${env.AUTHOR_EMAIL_ENCODED}&build_status=false"
+            // """
         }
     }
 }
